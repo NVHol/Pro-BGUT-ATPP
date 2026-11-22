@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro-БГУТ: Студент на час — АТПП</title>
+
+    <!-- Предзагрузка всех фонов для мгновенного переключения -->
+    <link rel="preload" href="fon1.jpg" as="image">
+    <link rel="preload" href="fon11.jpg" as="image">
+    <link rel="preload" href="fon2.jpg" as="image">
+    <link rel="preload" href="fon12.jpg" as="image">
+    <link rel="preload" href="fon3.jpg" as="image">
+    <link rel="preload" href="fon13.jpg" as="image">
+    <link rel="preload" href="fon4.jpg" as="image">
+    <link rel="preload" href="fon5.jpg" as="image">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: #050b14;
+            color: #e0f7fc;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: background-image 0.4s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 28px;
+        }
+
+        /* Затемнение для читаемости во время мини-игр; для чистых фонов отключается классом .no-dim */
+        #game-container::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(5, 11, 20, 0.3) 0%, rgba(5, 11, 20, 0.68) 100%);
+            pointer-events: none;
+            z-index: 1;
+            transition: opacity 0.35s ease;
+        }
+
+        #game-container.no-dim::before {
+            opacity: 0;
+        }
+
+        /* Предупреждение о портретной ориентации на мобильных */
+        #orientation-warning {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 11, 20, 0.96);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .rotate-icon {
+            font-size: 4rem;
+            margin-bottom: 18px;
+            animation: rotatePhone 2s infinite ease-in-out;
+        }
+
+        @keyframes rotatePhone {
+            0% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        /* Диалоговое окно */
+        .dialogue-box {
+            background: rgba(5, 11, 20, 0.88);
+            border: 2px solid #00e5ff;
+            border-radius: 12px;
+            padding: 22px 30px;
+            max-width: 920px;
+            width: 100%;
+            margin: 0 auto 14px auto;
+            box-shadow: 0 0 25px rgba(0, 229, 255, 0.38);
+            position: relative;
+            z-index: 10;
+            backdrop-filter: blur(6px);
+            cursor: pointer;
+        }
+
+        .dialogue-tag {
+            display: inline-block;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #ffb300;
+            background: rgba(255, 179, 0, 0.12);
+            border: 1px solid rgba(255, 179, 0, 0.45);
+            padding: 3px 10px;
+            border-radius: 999px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .dialogue-text {
+            font-size: 1.12rem;
+            line-height: 1.58;
+            margin-bottom: 16px;
+            color: #d4f6fc;
+            min-height: 74px;
+            text-align: left;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #00838f, #00acc1);
+            color: #fff;
+            border: none;
+            padding: 11px 26px;
+            font-size: 0.98rem;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(0, 172, 193, 0.45);
+            transition: all 0.25s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background: linear-gradient(135deg, #00acc1, #26c6da);
+            box-shadow: 0 0 18px rgba(38, 198, 218, 0.75);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: rgba(0, 188, 212, 0.16);
+            border: 1px solid #00e5ff;
+            color: #b2ebf2;
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(0, 229, 255, 0.28);
+            color: #fff;
+            box-shadow: none;
+        }
+
+        /* Индикатор ошибки */
+        #error-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 23, 68, 0.25);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            pointer-events: none;
+            animation: pulseError 0.45s infinite alternate;
+        }
+
+        @keyframes pulseError {
+            from { background: rgba(255, 23, 68, 0.12); }
+            to { background: rgba(255, 23, 68, 0.36); }
+        }
+
+        .error-icon {
+            font-size: 6.5rem;
+            color: #ff1744;
+            filter: drop-shadow(0 0 25px #ff1744);
+        }
+
+        .error-caption {
+            margin-top: 8px;
+            background: rgba(20, 5, 10, 0.9);
+            border: 1px solid #ff5252;
+            color: #ffcdd2;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        /* Общий стиль панелей мини-игр */
+        .game-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(8, 21, 36, 0.95);
+            border: 2px solid #00e5ff;
+            border-radius: 16px;
+            padding: 20px 26px;
+            z-index: 50;
+            display: none;
+            box-shadow: 0 0 40px rgba(0, 229, 255, 0.35);
+            backdrop-filter: blur(8px);
+            max-width: 94vw;
+            max-height: 94vh;
+            overflow-y: auto;
+        }
+
+        .panel-header {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .panel-header h3 {
+            color: #00e5ff;
+            font-size: 1.2rem;
+            margin-bottom: 4px;
+        }
+
+        .panel-header p {
+            color: #80deea;
+            font-size: 0.88rem;
+        }
+
+        /* --- МИНИ-ИГРА 1: СООТНЕСТИ ПАРЫ (ПАРАМЕТР <-> ПРИБОР) --- */
+        #match-minigame {
+            width: 820px;
+        }
+
+        .match-status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 188, 212, 0.1);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 8px;
+            padding: 8px 14px;
+            margin-bottom: 14px;
+            font-size: 0.88rem;
+            color: #b2ebf2;
+        }
+
+        .match-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .match-col-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #80deea;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .match-list {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+        }
+
+        .match-item {
+            background: rgba(15, 36, 58, 0.92);
+            border: 1.5px solid rgba(0, 229, 255, 0.45);
+            border-radius: 9px;
+            padding: 10px 13px;
+            font-size: 0.9rem;
+            line-height: 1.35;
+            color: #e0f7fc;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            text-align: left;
+        }
+
+        .match-item:hover:not(.matched) {
+            border-color: #26c6da;
+            background: rgba(0, 172, 193, 0.22);
+        }
+
+        .match-item.selected {
+            border-color: #ffd54f;
+            background: rgba(255, 213, 79, 0.18);
+            box-shadow: 0 0 12px rgba(255, 213, 79, 0.35);
+        }
+
+        .match-item.matched {
+            border-color: #00e676;
+            background: rgba(0, 230, 118, 0.16);
+            color: #b9f6ca;
+            cursor: default;
+        }
+
+        .pair-badge {
+            background: #00acc1;
+            color: #050b14;
+            font-weight: 800;
+            font-size: 0.75rem;
+            min-width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .match-item.matched .pair-badge {
+            background: #00e676;
+        }
+
+        /* --- МИНИ-ИГРА 2: САПЁР (МАТРИЦА УЗЛОВ КОНТУРА №2) --- */
+        #sapper-minigame {
+            width: 560px;
+        }
+
+        .sapper-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            background: rgba(0, 188, 212, 0.1);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.88rem;
+        }
+
+        .mode-switch {
+            display: flex;
+            gap: 6px;
+        }
+
+        .mode-btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #00bcd4;
+            background: #0d233a;
+            color: #b2ebf2;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .mode-btn.active {
+            background: #00acc1;
+            color: #050b14;
+            border-color: #80deea;
+        }
+
+        .sapper-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 7px;
+            max-width: 340px;
+            margin: 0 auto 12px auto;
+        }
+
+        .sapper-cell {
+            aspect-ratio: 1 / 1;
+            background: linear-gradient(145deg, #13314f, #0b1e33);
+            border: 1.5px solid #00bcd4;
+            border-radius: 8px;
+            color: #e0f7fc;
+            font-size: 1.15rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .sapper-cell:hover:not(.revealed) {
+            background: #1b456e;
+            transform: scale(1.03);
+        }
+
+        .sapper-cell.revealed {
+            background: rgba(5, 15, 28, 0.85);
+            border-color: rgba(0, 229, 255, 0.25);
+            cursor: default;
+        }
+
+        .sapper-cell.flagged {
+            border-color: #ffab00;
+            background: rgba(255, 171, 0, 0.18);
+            color: #ffd54f;
+        }
+
+        .sapper-cell.fault-hit {
+            border-color: #ff1744;
+            background: rgba(255, 23, 68, 0.35);
+            color: #ff8a80;
+        }
+
+        .n1 { color: #4fc3f7; }
+        .n2 { color: #81c784; }
+        .n3 { color: #ffb74d; }
+        .n4 { color: #ff8a65; }
+
+        .sapper-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.82rem;
+            color: #80deea;
+        }
+
+        /* --- МИНИ-ИГРА 3: КОД ДЛЯ ПЕРЕЗАПУСКА ПУЛЬТА --- */
+        #code-minigame {
+            width: 640px;
+            padding: 16px 22px;
+            text-align: center;
+        }
+
+        #code-minigame .panel-header {
+            margin-bottom: 10px;
+        }
+
+        .code-workspace {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 22px;
+        }
+
+        .diagnostic-diagram-box {
+            background: #06182c;
+            border: 1.5px solid rgba(0, 229, 255, 0.45);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-width: 210px;
+        }
+
+        .diagnostic-svg {
+            width: 145px;
+            height: 126px;
+            filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.35));
+        }
+
+        .diagnostic-caption {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #4dd0e1;
+            text-align: center;
+        }
+
+        .code-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .code-display {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .code-slot {
+            width: 46px;
+            height: 50px;
+            background: #07233b;
+            border-bottom: 3px solid #00e5ff;
+            border-top: 1px solid rgba(0, 229, 255, 0.35);
+            border-left: 1px solid rgba(0, 229, 255, 0.35);
+            border-right: 1px solid rgba(0, 229, 255, 0.35);
+            border-radius: 8px;
+            font-size: 1.7rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 64px);
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+
+        .key-btn {
+            background: #0e2438;
+            border: 1.5px solid #00bcd4;
+            color: #4dd0e1;
+            font-size: 1.25rem;
+            font-weight: 700;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.18s;
+        }
+
+        .key-btn:hover {
+            background: #00bcd4;
+            color: #050b14;
+        }
+
+        .key-zero {
+            grid-column: 2;
+        }
+
+        .keypad-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border-radius: 7px;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-clear {
+            background: #c62828;
+            color: #fff;
+        }
+
+        .btn-clear:hover {
+            background: #e53935;
+        }
+
+        .btn-submit {
+            background: #2e7d32;
+            color: #fff;
+        }
+
+        .btn-submit:hover {
+            background: #388e3c;
+        }
+
+        /* --- ФИНАЛЬНЫЙ ЭКРАН ПОБЕДЫ --- */
+        #victory-panel {
+            width: 780px;
+            padding: 24px 30px;
+            text-align: left;
+        }
+
+        .victory-status {
+            display: inline-block;
+            background: rgba(0, 230, 118, 0.16);
+            border: 1px solid #00e676;
+            color: #69f0ae;
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 3px 12px;
+            border-radius: 999px;
+            margin-bottom: 10px;
+        }
+
+        .victory-panel h2 {
+            color: #00e5ff;
+            font-size: 1.65rem;
+            margin-bottom: 12px;
+        }
+
+        .victory-panel h3 {
+            color: #80deea;
+            font-size: 1.06rem;
+            margin-top: 22px;
+            margin-bottom: 14px;
+        }
+
+        .competence-list {
+            list-style: none;
+            margin: 0 0 22px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 11px;
+        }
+
+        .competence-list li {
+            background: rgba(0, 188, 212, 0.1);
+            border-left: 4px solid #00e5ff;
+            padding: 10px 14px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.93rem;
+            line-height: 1.45;
+            color: #d4f6fc;
+        }
+
+        .competence-list li strong {
+            color: #4dd0e1;
+        }
+
+        /* Адаптация для телефонов в горизонтальном режиме */
+        @media (max-height: 520px) {
+            body {
+                overflow-y: auto;
+                overflow-x: hidden;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            #game-container {
+                height: 86vh;
+                min-height: 360px;
+                padding: 8px 14px;
+            }
+
+            .dialogue-box {
+                padding: 10px 14px;
+                margin-bottom: 4px;
+            }
+
+            .dialogue-tag {
+                font-size: 0.65rem;
+                padding: 2px 8px;
+                margin-bottom: 4px;
+            }
+
+            .dialogue-text {
+                font-size: 0.82rem;
+                line-height: 1.3;
+                min-height: 34px;
+                margin-bottom: 8px;
+            }
+
+            .btn {
+                padding: 6px 14px;
+                font-size: 0.8rem;
+            }
+
+            .game-panel {
+                padding: 10px 14px;
+                border-radius: 12px;
+                max-height: 94vh;
+            }
+
+            .panel-header {
+                margin-bottom: 6px;
+            }
+
+            .panel-header h3 {
+                font-size: 0.95rem;
+            }
+
+            .panel-header p {
+                font-size: 0.72rem;
+            }
+
+            #match-minigame {
+                width: 92vw;
+            }
+
+            .match-status-bar {
+                padding: 5px 10px;
+                font-size: 0.74rem;
+                margin-bottom: 8px;
+            }
+
+            .match-col-title {
+                font-size: 0.7rem;
+                margin-bottom: 4px;
+            }
+
+            .match-grid {
+                gap: 8px;
+            }
+
+            .match-list {
+                gap: 5px;
+            }
+
+            .match-item {
+                padding: 6px 8px;
+                font-size: 0.72rem;
+                line-height: 1.2;
+            }
+
+            .pair-badge {
+                min-width: 18px;
+                height: 18px;
+                font-size: 0.65rem;
+            }
+
+            #sapper-minigame {
+                width: 90vw;
+            }
+
+            .sapper-toolbar {
+                padding: 5px 9px;
+                font-size: 0.72rem;
+                margin-bottom: 8px;
+            }
+
+            .mode-btn {
+                padding: 4px 8px;
+                font-size: 0.7rem;
+            }
+
+            .sapper-board {
+                max-width: 205px;
+                gap: 4px;
+                margin-bottom: 8px;
+            }
+
+            .sapper-cell {
+                font-size: 0.85rem;
+                border-radius: 5px;
+            }
+
+            .sapper-footer {
+                font-size: 0.68rem;
+            }
+
+            #code-minigame {
+                width: 92vw;
+                padding: 8px 12px;
+            }
+
+            .code-workspace {
+                gap: 14px;
+            }
+
+            .diagnostic-diagram-box {
+                min-width: 130px;
+                padding: 8px 10px;
+                gap: 4px;
+            }
+
+            .diagnostic-svg {
+                width: 95px;
+                height: 82px;
+            }
+
+            .diagnostic-caption {
+                font-size: 0.68rem;
+            }
+
+            .code-display {
+                gap: 8px;
+                margin-bottom: 7px;
+            }
+
+            .code-slot {
+                width: 34px;
+                height: 36px;
+                font-size: 1.2rem;
+            }
+
+            .keypad {
+                grid-template-columns: repeat(5, 42px);
+                gap: 5px;
+                margin-bottom: 7px;
+            }
+
+            .key-btn {
+                height: 32px;
+                font-size: 0.95rem;
+                border-radius: 5px;
+            }
+
+            .key-zero {
+                grid-column: auto;
+            }
+
+            .action-btn {
+                padding: 5px 12px;
+                font-size: 0.76rem;
+            }
+
+            #victory-panel {
+                width: 94vw;
+                padding: 12px 16px;
+            }
+
+            .victory-status {
+                font-size: 0.68rem;
+                padding: 2px 8px;
+                margin-bottom: 4px;
+            }
+
+            .victory-panel h2 {
+                font-size: 1.05rem;
+                margin-bottom: 6px;
+            }
+
+            .victory-panel > p {
+                font-size: 0.74rem !important;
+                line-height: 1.28 !important;
+            }
+
+            .victory-panel h3 {
+                font-size: 0.8rem;
+                margin-top: 10px;
+                margin-bottom: 6px;
+            }
+
+            .competence-list {
+                margin: 0 0 10px 0;
+                gap: 5px;
+            }
+
+            .competence-list li {
+                padding: 6px 10px;
+                font-size: 0.72rem;
+                line-height: 1.26;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Предупреждение о вертикальной ориентации на телефонах -->
+    <div id="orientation-warning">
+        <div class="rotate-icon">📱🔄</div>
+        <h2 style="color: #00e5ff; margin-bottom: 10px;">Поверните телефон горизонтально</h2>
+        <p style="color: #b2ebf2; font-size: 0.98rem; max-width: 400px;">
+            Для удобного просмотра мнемосхем, диагностических таблиц и кнопок управления расположите экран горизонтально.
+        </p>
+    </div>
+
+    <div id="game-container" class="no-dim" style="background-image: url('fon1.jpg');">
+
+        <!-- Оверлей ошибки -->
+        <div id="error-overlay">
+            <div class="error-icon">⚠️</div>
+            <div class="error-caption" id="error-text">Ошибка диагностики контура!</div>
+        </div>
+
+        <!-- МИНИ-ИГРА 1: СООТНЕСТИ ПАРЫ -->
+        <div id="match-minigame" class="game-panel">
+            <div class="panel-header">
+                <h3>Этап 1. Проверка привязки параметров и приборов</h3>
+                <p>Сопоставьте технологический параметр контура №2 с подходящим средством автоматизации АСУ ТП.</p>
+            </div>
+            <div class="match-status-bar">
+                <span>Сопоставлено пар: <strong id="match-progress">0 / 4</strong></span>
+                <button type="button" class="btn btn-secondary" style="padding: 5px 12px; font-size: 0.8rem;" onclick="resetMatchGame()">Сбросить пары</button>
+            </div>
+            <div class="match-grid">
+                <div>
+                    <div class="match-col-title">Параметр / точка регулирования</div>
+                    <div class="match-list" id="left-params"></div>
+                </div>
+                <div>
+                    <div class="match-col-title">Прибор / элемент АСУ ТП</div>
+                    <div class="match-list" id="right-devices"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- МИНИ-ИГРА 2: САПЁР (МАТРИЦА УЗЛОВ КОНТУРА №2) -->
+        <div id="sapper-minigame" class="game-panel">
+            <div class="panel-header">
+                <h3>Этап 2. Диагностика матрицы узлов контура №2</h3>
+                <p>Цифра показывает, сколько соседних узлов имеют помеху или сбой линии. Отметьте все 4 проблемных узла флажками и откройте остальные.</p>
+            </div>
+            <div class="sapper-toolbar">
+                <span>Пометок помех: <strong id="flags-count">0</strong> / 4</span>
+                <div class="mode-switch">
+                    <button type="button" class="mode-btn active" id="mode-open" onclick="setSapperMode('open')">🔍 Проверка узла</button>
+                    <button type="button" class="mode-btn" id="mode-flag" onclick="setSapperMode('flag')">🚩 Метка помехи</button>
+                </div>
+            </div>
+            <div class="sapper-board" id="sapper-board"></div>
+            <div class="sapper-footer">
+                <span>На ПК можно ставить метку правой кнопкой мыши.</span>
+                <button type="button" class="btn btn-secondary" style="padding: 5px 12px; font-size: 0.78rem;" onclick="initSapperGame()">Перезапустить сетку</button>
+            </div>
+        </div>
+
+        <!-- МИНИ-ИГРА 3: КОД ДЛЯ ПЕРЕЗАПУСКА ПУЛЬТА -->
+        <div id="code-minigame" class="game-panel">
+            <div class="panel-header">
+                <h3>Этап 3. Перезапуск пульта управления контуром №2</h3>
+                <p>Ложный сигнал подтверждён. Расшифруйте графический ключ из журнала диагностики БЩУ-2.</p>
+            </div>
+            <div class="code-workspace">
+                <div class="diagnostic-diagram-box">
+                    <svg class="diagnostic-svg" viewBox="0 0 220 190" aria-label="Графический ключ из журнала диагностики БЩУ-2">
+                        <polygon points="110,14 14,176 206,176" fill="none" stroke="#e0f7fc" stroke-width="5" stroke-linejoin="round"/>
+                        <rect x="63" y="92" width="94" height="84" fill="none" stroke="#4dd0e1" stroke-width="4.5"/>
+                        <circle cx="110" cy="134" r="42" fill="none" stroke="#80deea" stroke-width="4.5"/>
+                        <rect x="81" y="106" width="58" height="56" fill="none" stroke="#e0f7fc" stroke-width="4.5"/>
+                    </svg>
+                    <div class="diagnostic-caption">Журнал диагностики БЩУ-2<br>Графический ключ</div>
+                </div>
+                <div class="code-controls">
+                    <div class="code-display">
+                        <div class="code-slot" id="slot-0"></div>
+                        <div class="code-slot" id="slot-1"></div>
+                        <div class="code-slot" id="slot-2"></div>
+                        <div class="code-slot" id="slot-3"></div>
+                    </div>
+                    <div class="keypad">
+                        <button type="button" class="key-btn" onclick="pressKey(1)">1</button>
+                        <button type="button" class="key-btn" onclick="pressKey(2)">2</button>
+                        <button type="button" class="key-btn" onclick="pressKey(3)">3</button>
+                        <button type="button" class="key-btn" onclick="pressKey(4)">4</button>
+                        <button type="button" class="key-btn" onclick="pressKey(5)">5</button>
+                        <button type="button" class="key-btn" onclick="pressKey(6)">6</button>
+                        <button type="button" class="key-btn" onclick="pressKey(7)">7</button>
+                        <button type="button" class="key-btn" onclick="pressKey(8)">8</button>
+                        <button type="button" class="key-btn" onclick="pressKey(9)">9</button>
+                        <button type="button" class="key-btn key-zero" onclick="pressKey(0)">0</button>
+                    </div>
+                    <div class="keypad-actions">
+                        <button type="button" class="action-btn btn-clear" onclick="clearCode()">🗑️ Сброс</button>
+                        <button type="button" class="action-btn btn-submit" onclick="submitCode()">✅ Перезапуск</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ФИНАЛЬНЫЙ ЭКРАН ПОБЕДЫ -->
+        <div id="victory-panel" class="game-panel">
+            <div class="victory-status">Статус контура №2: нормализован</div>
+            <h2>Авария предотвращена</h2>
+            <p style="color: #b2ebf2; font-size: 0.95rem; line-height: 1.48;">
+                Ложное срабатывание тревоги на БЩУ-2 локализовано и устранено без лишнего экстренного останова энергоблока. Контур охлаждения парогенератора работает в штатном режиме.
+            </p>
+            <h3>Чему научило каждое задание квеста (специальность «Автоматизация технологических процессов и производств»):</h3>
+            <ul class="competence-list">
+                <li><strong>Привязка датчиков и исполнительных механизмов:</strong> Проверка соответствия измерительных преобразователей и регулирующих органов задачам технологического процесса.</li>
+                <li><strong>Диагностика сигналов и линий связи:</strong> Формирует логическое и алгоритмическое мышление, умение по косвенным признакам анализировать матрицу состояний.</li>
+                <li><strong>Расшифровка ключа и перезапуск контура:</strong> Развивает системный анализ и внимательность при работе с технической документацией.</li>
+            </ul>
+            <p style="color: #00ffcc; font-size: 0.85rem; margin-top: 8px; margin-bottom: 4px; text-align: center;">📱 Поверните телефон вертикально для комфортного просмотра Шага 3</p>
+            <a href="https://nvhol.github.io/Pro-BGUT/testdrive.html" class="btn" style="width: 100%; margin-top: 4px;">ПЕРЕЙТИ НА ШАГ 3</a>
+        </div>
+
+        <!-- ДИАЛОГОВОЕ ОКНО -->
+        <div class="dialogue-box" id="dialogue-box" onclick="handleDialogueClick()">
+            <div class="dialogue-tag" id="dialogue-tag">БЩУ-2 • Ночная смена</div>
+            <div class="dialogue-text" id="dialogue-text"></div>
+            <button type="button" class="btn" id="next-btn" onclick="event.stopPropagation(); nextStage();" style="display: none;">Продолжить</button>
+        </div>
+
+    </div>
+
+    <script>
+        const container = document.getElementById('game-container');
+        const dialogueBox = document.getElementById('dialogue-box');
+        const dialogueTag = document.getElementById('dialogue-tag');
+        const dialogueText = document.getElementById('dialogue-text');
+        const nextBtn = document.getElementById('next-btn');
+        const errorOverlay = document.getElementById('error-overlay');
+        const errorText = document.getElementById('error-text');
+
+        let currentStage = 1;
+        let typingInterval = null;
+        let isTyping = false;
+        let fullCurrentText = '';
+        let stageTimeout = null;
+
+        // Проверка ориентации на мобильных устройствах
+        function checkOrientation() {
+            const warning = document.getElementById('orientation-warning');
+            if (window.innerWidth < 900 && window.innerHeight > window.innerWidth) {
+                warning.style.display = 'flex';
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+
+        window.addEventListener('resize', checkOrientation);
+
+        const stages = {
+            1: {
+                bg: 'fon1.jpg',
+                noDim: true,
+                tag: 'БЩУ-2 • Тревога контура №2',
+                text: 'Ночная смена на блочном щите управления (БЩУ-2) атомной станции проходит штатно, как вдруг на мнемосхеме контура охлаждения парогенератора загорается предупреждение: «Критическое расхождение показаний датчиков давления и расхода теплоносителя в контуре №2 — возможен перегрев».'
+            },
+            2: {
+                bg: 'fon11.jpg',
+                noDim: true,
+                tag: 'АСУ ТП • Выбор решения',
+                text: 'Аварийная защита ещё не сработала, но медлить нельзя. Если это реальный сбой регулирования — промедление опасно; если ложный сигнал из-за помехи или обрыва линии — лишний экстренный останов блока сорвёт работу станции. Как инженер по АСУ ТП, проверьте привязку приборов, продиагностируйте матрицу узлов и перезапустите пульт.'
+            },
+            3: {
+                bg: 'fon2.jpg',
+                noDim: true,
+                action: () => {
+                    dialogueBox.style.display = 'none';
+                    stageTimeout = setTimeout(() => {
+                        container.classList.remove('no-dim');
+                        resetMatchGame();
+                        document.getElementById('match-minigame').style.display = 'block';
+                    }, 1000);
+                }
+            },
+            4: {
+                bg: 'fon12.jpg',
+                noDim: true,
+                tag: 'БЩУ-2 • Привязка подтверждена',
+                text: 'Конфигурация датчиков и исполнительных механизмов контура №2 проверена. Теперь необходимо прощупать матрицу сигналов и узлов, чтобы отделить помеху на линии от реального сбоя.'
+            },
+            5: {
+                bg: 'fon3.jpg',
+                noDim: true,
+                action: () => {
+                    dialogueBox.style.display = 'none';
+                    stageTimeout = setTimeout(() => {
+                        container.classList.remove('no-dim');
+                        initSapperGame();
+                        document.getElementById('sapper-minigame').style.display = 'block';
+                    }, 1000);
+                }
+            },
+            6: {
+                bg: 'fon13.jpg',
+                noDim: true,
+                tag: 'БЩУ-2 • Источник помехи найден',
+                text: 'Сбойные каналы локализованы — тревогу вызвала помеха на измерительной линии, перегрева в контуре нет. Остаётся ввести системный код сброса и перезапустить пульт управления контуром №2.'
+            },
+            7: {
+                bg: 'fon4.jpg',
+                noDim: true,
+                action: () => {
+                    dialogueBox.style.display = 'none';
+                    stageTimeout = setTimeout(() => {
+                        container.classList.remove('no-dim');
+                        clearCode();
+                        document.getElementById('code-minigame').style.display = 'block';
+                    }, 1000);
+                }
+            },
+            8: {
+                bg: 'fon5.jpg',
+                noDim: true,
+                action: () => {
+                    dialogueBox.style.display = 'none';
+                    stageTimeout = setTimeout(() => {
+                        container.classList.remove('no-dim');
+                        document.getElementById('victory-panel').style.display = 'block';
+                    }, 1000);
+                }
+            }
+        };
+
+        function typeWriter(text) {
+            fullCurrentText = text;
+            dialogueText.innerHTML = '';
+            nextBtn.style.display = 'none';
+            isTyping = true;
+            let i = 0;
+
+            if (typingInterval) clearInterval(typingInterval);
+
+            typingInterval = setInterval(() => {
+                if (i < text.length) {
+                    dialogueText.innerHTML += text.charAt(i);
+                    i++;
+                } else {
+                    clearInterval(typingInterval);
+                    isTyping = false;
+                    nextBtn.style.display = 'inline-block';
+                }
+            }, 20);
+        }
+
+        function handleDialogueClick() {
+            if (isTyping) {
+                if (typingInterval) clearInterval(typingInterval);
+                dialogueText.innerHTML = fullCurrentText;
+                isTyping = false;
+                nextBtn.style.display = 'inline-block';
+            }
+        }
+
+        function updateStage() {
+            if (stageTimeout) {
+                clearTimeout(stageTimeout);
+                stageTimeout = null;
+            }
+            const stage = stages[currentStage];
+            container.style.backgroundImage = `url('${stage.bg}')`;
+
+            if (stage.noDim) {
+                container.classList.add('no-dim');
+            } else {
+                container.classList.remove('no-dim');
+            }
+
+            if (stage.tag) {
+                dialogueTag.textContent = stage.tag;
+            }
+            if (stage.action) {
+                stage.action();
+            } else {
+                dialogueBox.style.display = 'block';
+                typeWriter(stage.text);
+            }
+        }
+
+        function nextStage() {
+            if (isTyping) {
+                handleDialogueClick();
+                return;
+            }
+            currentStage++;
+            if (stages[currentStage]) {
+                updateStage();
+            }
+        }
+
+        function triggerErrorAnimation(message = 'Ошибка проверки! Попробуйте ещё раз.') {
+            errorText.textContent = message;
+            errorOverlay.style.display = 'flex';
+            setTimeout(() => {
+                errorOverlay.style.display = 'none';
+            }, 1100);
+        }
+
+        // --- МИНИ-ИГРА 1: СООТНЕСТИ ЭЛЕМЕНТЫ ---
+        const matchPairs = [
+            {
+                id: 'p1',
+                param: 'Контроль температуры теплоносителя на входе в теплообменник',
+                device: 'Термопреобразователь сопротивления (ТС)'
+            },
+            {
+                id: 'p2',
+                param: 'Измерение уровня воды в компенсаторе давления',
+                device: 'Дифференциальный манометр / уровнемер'
+            },
+            {
+                id: 'p3',
+                param: 'Регулирование расхода питательной воды',
+                device: 'Регулирующий клапан с электроприводом'
+            },
+            {
+                id: 'p4',
+                param: 'Контроль перепада давления на фильтре контура',
+                device: 'Датчик перепада давления'
+            }
+        ];
+
+        let selectedParamId = null;
+        let selectedDeviceId = null;
+        let matchedIds = new Set();
+
+        function shuffleArray(arr) {
+            const copy = [...arr];
+            for (let i = copy.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+            return copy;
+        }
+
+        function resetMatchGame() {
+            selectedParamId = null;
+            selectedDeviceId = null;
+            matchedIds.clear();
+            matchPairs._shuffledDevices = shuffleArray(matchPairs);
+            renderMatchLists();
+        }
+
+        function renderMatchLists() {
+            const leftContainer = document.getElementById('left-params');
+            const rightContainer = document.getElementById('right-devices');
+            leftContainer.innerHTML = '';
+            rightContainer.innerHTML = '';
+
+            const shuffledDevices = matchPairs._shuffledDevices || (matchPairs._shuffledDevices = shuffleArray(matchPairs));
+
+            matchPairs.forEach((item, idx) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'match-item';
+                if (matchedIds.has(item.id)) btn.classList.add('matched');
+                if (selectedParamId === item.id) btn.classList.add('selected');
+
+                btn.innerHTML = `<span>${item.param}</span><span class="pair-badge">${matchedIds.has(item.id) ? idx + 1 : '•'}</span>`;
+                btn.onclick = () => selectParam(item.id);
+                leftContainer.appendChild(btn);
+            });
+
+            shuffledDevices.forEach((item) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'match-item';
+                const pairIndex = matchPairs.findIndex(p => p.id === item.id);
+                if (matchedIds.has(item.id)) btn.classList.add('matched');
+                if (selectedDeviceId === item.id) btn.classList.add('selected');
+
+                btn.innerHTML = `<span>${item.device}</span><span class="pair-badge">${matchedIds.has(item.id) ? pairIndex + 1 : '•'}</span>`;
+                btn.onclick = () => selectDevice(item.id);
+                rightContainer.appendChild(btn);
+            });
+
+            document.getElementById('match-progress').textContent = `${matchedIds.size} / ${matchPairs.length}`;
+        }
+
+        function selectParam(id) {
+            if (matchedIds.has(id)) return;
+            selectedParamId = (selectedParamId === id) ? null : id;
+            evaluateMatchSelection();
+            renderMatchLists();
+        }
+
+        function selectDevice(id) {
+            if (matchedIds.has(id)) return;
+            selectedDeviceId = (selectedDeviceId === id) ? null : id;
+            evaluateMatchSelection();
+            renderMatchLists();
+        }
+
+        function evaluateMatchSelection() {
+            if (!selectedParamId || !selectedDeviceId) return;
+
+            if (selectedParamId === selectedDeviceId) {
+                matchedIds.add(selectedParamId);
+                selectedParamId = null;
+                selectedDeviceId = null;
+
+                if (matchedIds.size === matchPairs.length) {
+                    renderMatchLists();
+                    setTimeout(() => {
+                        document.getElementById('match-minigame').style.display = 'none';
+                        currentStage = 4;
+                        updateStage();
+                    }, 450);
+                }
+            } else {
+                triggerErrorAnimation('Несоответствие параметра и прибора!');
+                selectedParamId = null;
+                selectedDeviceId = null;
+            }
+        }
+
+        // --- МИНИ-ИГРА 2: САПЁР (СЕТКА 5x5, 4 ПРОБЛЕМНЫХ УЗЛА) ---
+        const SAPPER_ROWS = 5;
+        const SAPPER_COLS = 5;
+        const FAULT_COUNT = 4;
+
+        let sapperMode = 'open';
+        let sapperGrid = [];
+        let sapperGameOver = false;
+
+        function setSapperMode(mode) {
+            sapperMode = mode;
+            document.getElementById('mode-open').classList.toggle('active', mode === 'open');
+            document.getElementById('mode-flag').classList.toggle('active', mode === 'flag');
+        }
+
+        function initSapperGame() {
+            sapperGameOver = false;
+            sapperGrid = [];
+
+            for (let r = 0; r < SAPPER_ROWS; r++) {
+                const row = [];
+                for (let c = 0; c < SAPPER_COLS; c++) {
+                    row.push({
+                        r,
+                        c,
+                        fault: false,
+                        revealed: false,
+                        flagged: false,
+                        adjacent: 0
+                    });
+                }
+                sapperGrid.push(row);
+            }
+
+            let placed = 0;
+            while (placed < FAULT_COUNT) {
+                const r = Math.floor(Math.random() * SAPPER_ROWS);
+                const c = Math.floor(Math.random() * SAPPER_COLS);
+                if (!sapperGrid[r][c].fault) {
+                    sapperGrid[r][c].fault = true;
+                    placed++;
+                }
+            }
+
+            for (let r = 0; r < SAPPER_ROWS; r++) {
+                for (let c = 0; c < SAPPER_COLS; c++) {
+                    sapperGrid[r][c].adjacent = countAdjacentFaults(r, c);
+                }
+            }
+
+            renderSapperBoard();
+        }
+
+        function countAdjacentFaults(row, col) {
+            let count = 0;
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    const nr = row + dr;
+                    const nc = col + dc;
+                    if (nr >= 0 && nr < SAPPER_ROWS && nc >= 0 && nc < SAPPER_COLS) {
+                        if (sapperGrid[nr][nc].fault) count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        function renderSapperBoard() {
+            const board = document.getElementById('sapper-board');
+            board.innerHTML = '';
+
+            let flagsPlaced = 0;
+            let safeRevealed = 0;
+            const totalSafe = SAPPER_ROWS * SAPPER_COLS - FAULT_COUNT;
+
+            for (let r = 0; r < SAPPER_ROWS; r++) {
+                for (let c = 0; c < SAPPER_COLS; c++) {
+                    const cell = sapperGrid[r][c];
+                    if (cell.flagged) flagsPlaced++;
+                    if (cell.revealed && !cell.fault) safeRevealed++;
+
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'sapper-cell';
+                    btn.title = `Узел К2-${r + 1}${c + 1}`;
+
+                    if (cell.revealed) {
+                        btn.classList.add('revealed');
+                        if (cell.fault) {
+                            btn.classList.add('fault-hit');
+                            btn.textContent = '⚡';
+                        } else if (cell.adjacent > 0) {
+                            btn.textContent = cell.adjacent;
+                            btn.classList.add(`n${cell.adjacent}`);
+                        } else {
+                            btn.textContent = '·';
+                        }
+                    } else if (cell.flagged) {
+                        btn.classList.add('flagged');
+                        btn.textContent = '🚩';
+                    }
+
+                    btn.onclick = () => handleSapperClick(r, c);
+                    btn.oncontextmenu = (e) => {
+                        e.preventDefault();
+                        toggleFlag(r, c);
+                    };
+
+                    board.appendChild(btn);
+                }
+            }
+
+            document.getElementById('flags-count').textContent = flagsPlaced;
+
+            if (!sapperGameOver && safeRevealed === totalSafe) {
+                sapperGameOver = true;
+                setTimeout(() => {
+                    document.getElementById('sapper-minigame').style.display = 'none';
+                    currentStage = 6;
+                    updateStage();
+                }, 450);
+            }
+        }
+
+        function toggleFlag(r, c) {
+            if (sapperGameOver) return;
+            const cell = sapperGrid[r][c];
+            if (cell.revealed) return;
+            cell.flagged = !cell.flagged;
+            renderSapperBoard();
+        }
+
+        function handleSapperClick(r, c) {
+            if (sapperGameOver) return;
+            const cell = sapperGrid[r][c];
+
+            if (sapperMode === 'flag') {
+                toggleFlag(r, c);
+                return;
+            }
+
+            if (cell.flagged || cell.revealed) return;
+
+            if (cell.fault) {
+                cell.revealed = true;
+                renderSapperBoard();
+                triggerErrorAnimation('Попали в сбойный узел! Сетка перезагружена.');
+                setTimeout(initSapperGame, 900);
+                return;
+            }
+
+            revealSafeCell(r, c);
+            renderSapperBoard();
+        }
+
+        function revealSafeCell(r, c) {
+            const cell = sapperGrid[r][c];
+            if (cell.revealed || cell.flagged || cell.fault) return;
+            cell.revealed = true;
+
+            if (cell.adjacent === 0) {
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        const nr = r + dr;
+                        const nc = c + dc;
+                        if (nr >= 0 && nr < SAPPER_ROWS && nc >= 0 && nc < SAPPER_COLS) {
+                            if (!sapperGrid[nr][nc].revealed) {
+                                revealSafeCell(nr, nc);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- МИНИ-ИГРА 3: КОД ДЛЯ ПЕРЕЗАПУСКА ПУЛЬТА (3404) ---
+        let enteredCode = [];
+        const correctCode = [3, 4, 0, 4];
+
+        function pressKey(num) {
+            if (enteredCode.length < 4) {
+                enteredCode.push(num);
+                updateCodeDisplay();
+            }
+        }
+
+        function clearCode() {
+            enteredCode = [];
+            updateCodeDisplay();
+        }
+
+        function updateCodeDisplay() {
+            for (let i = 0; i < 4; i++) {
+                document.getElementById(`slot-${i}`).textContent =
+                    enteredCode[i] !== undefined ? enteredCode[i] : '';
+            }
+        }
+
+        function submitCode() {
+            if (enteredCode.length !== 4) {
+                triggerErrorAnimation('Введите все 4 цифры кода сброса.');
+                return;
+            }
+
+            const isCorrect = enteredCode.every((digit, idx) => digit === correctCode[idx]);
+            if (isCorrect) {
+                document.getElementById('code-minigame').style.display = 'none';
+                currentStage = 8;
+                updateStage();
+            } else {
+                triggerErrorAnimation('Неверный код перезапуска! Проверьте расшифровку графического ключа.');
+                clearCode();
+            }
+        }
+
+        window.onload = () => {
+            checkOrientation();
+            updateStage();
+        };
+    </script>
+</body>
+</html>
