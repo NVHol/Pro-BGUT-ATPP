@@ -2,7 +2,9 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Pro-БГУТ: Студент на час — АТПП</title>
 
     <!-- Предзагрузка всех фонов для мгновенного переключения -->
@@ -24,20 +26,40 @@
             user-select: none;
         }
 
+        html {
+            height: 100%;
+        }
+
         body {
             background-color: #050b14;
             color: #e0f7fc;
-            height: 100vh;
+            min-height: 100vh;
+            min-height: 100dvh;
+            width: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
             overflow: hidden;
         }
 
+        /* Небольшой запас высоты для срабатывания автоскрытия адресной строки в мобильном браузере */
+        #scroll-spacer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 1px;
+            height: calc(100dvh + 120px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
         #game-container {
             width: 100vw;
             height: 100vh;
-            position: relative;
+            height: 100dvh;
+            position: fixed;
+            top: 0;
+            left: 0;
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -46,6 +68,7 @@
             flex-direction: column;
             justify-content: flex-end;
             padding: 28px;
+            z-index: 2;
         }
 
         /* Затемнение для читаемости во время мини-игр; для чистых фонов отключается классом .no-dim */
@@ -214,7 +237,7 @@
             box-shadow: 0 0 40px rgba(0, 229, 255, 0.35);
             backdrop-filter: blur(8px);
             max-width: 94vw;
-            max-height: 94vh;
+            max-height: 94dvh;
             overflow-y: auto;
         }
 
@@ -626,15 +649,12 @@
         /* Адаптация для телефонов в горизонтальном режиме */
         @media (max-height: 520px) {
             body {
-                overflow-y: auto;
-                overflow-x: hidden;
-                height: auto;
-                min-height: 100vh;
+                min-height: calc(100dvh + 120px);
             }
 
             #game-container {
-                height: 86vh;
-                min-height: 360px;
+                height: 100dvh;
+                min-height: 320px;
                 padding: 8px 14px;
             }
 
@@ -664,7 +684,7 @@
             .game-panel {
                 padding: 10px 14px;
                 border-radius: 12px;
-                max-height: 94vh;
+                max-height: 94dvh;
             }
 
             .panel-header {
@@ -842,6 +862,8 @@
 </head>
 <body>
 
+    <div id="scroll-spacer"></div>
+
     <!-- Предупреждение о вертикальной ориентации на телефонах -->
     <div id="orientation-warning">
         <div class="rotate-icon">📱🔄</div>
@@ -985,6 +1007,20 @@
         let fullCurrentText = '';
         let stageTimeout = null;
 
+        // Попытка скрыть адресную строку мобильного браузера прокруткой и полноэкранным режимом
+        function hideMobileAddressBar(tryFullscreen = false) {
+            setTimeout(() => {
+                window.scrollTo(0, 1);
+            }, 60);
+            setTimeout(() => {
+                window.scrollTo(0, 1);
+            }, 350);
+
+            if (tryFullscreen && window.innerWidth < 900 && document.documentElement.requestFullscreen && !document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            }
+        }
+
         // Проверка ориентации на мобильных устройствах
         function checkOrientation() {
             const warning = document.getElementById('orientation-warning');
@@ -992,6 +1028,7 @@
                 warning.style.display = 'flex';
             } else {
                 warning.style.display = 'none';
+                hideMobileAddressBar(false);
             }
         }
 
@@ -1093,6 +1130,7 @@
         }
 
         function handleDialogueClick() {
+            hideMobileAddressBar(true);
             if (isTyping) {
                 if (typingInterval) clearInterval(typingInterval);
                 dialogueText.innerHTML = fullCurrentText;
@@ -1124,9 +1162,11 @@
                 dialogueBox.style.display = 'block';
                 typeWriter(stage.text);
             }
+            hideMobileAddressBar(false);
         }
 
         function nextStage() {
+            hideMobileAddressBar(true);
             if (isTyping) {
                 handleDialogueClick();
                 return;
@@ -1482,6 +1522,7 @@
         window.onload = () => {
             checkOrientation();
             updateStage();
+            hideMobileAddressBar(false);
         };
     </script>
 </body>
